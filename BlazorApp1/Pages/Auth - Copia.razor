@@ -1,0 +1,66 @@
+﻿@page "/authacsa"
+@inject HttpClient HttpClient
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+
+
+
+<h4>Autenticación</h4>
+<form @onsubmit="Autenticar">
+    <div class="mb-3">
+        <label for="username" class="form-label">Nombre de usuario:</label>
+        <input type="text" class="form-control" id="username" @bind="username">
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Contraseña:</label>
+        <input type="password" class="form-control" id="password" @bind="password">
+    </div>
+    <button type="submit" class="btn btn-primary">Iniciar sesión</button>
+</form>
+
+@code {
+    private string username;
+    private string password;
+
+    private async Task Autenticar()
+    {
+        try
+        {
+            var request = new { username, password };
+            var response = await HttpClient.PostAsJsonAsync("https://authenticate.serviciosacsa.com/Authenticate/GetAccessToken", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Deserializa el objeto JSON para obtener el token de acceso
+                var responseObject = JsonSerializer.Deserialize<Dictionary<string, string>>(responseContent);
+
+                if (responseObject.TryGetValue("access_token", out var accessToken))
+                {
+                    // Almacena el token en localStorage usando IJSRuntime
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "accessToken", accessToken);
+
+                    // Redirige al componente de clientes después de la autenticación
+                    NavigationManager.NavigateTo("/clientes");
+                }
+                else
+                {
+                    Console.WriteLine("No se pudo encontrar el token de acceso en la respuesta JSON.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error al autenticarse. Verifica las credenciales.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+}

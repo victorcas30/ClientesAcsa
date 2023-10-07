@@ -1,0 +1,596 @@
+﻿@page "/editarcliente/{id}"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using System.Net.Http.Headers
+@inject IJSRuntime JSRuntime
+@using System.Text.Json.Serialization;
+@using System.Text.Json 
+@using System.Collections.Generic 
+@using System.Text
+@using System.Globalization
+
+<h3>Editar Cliente</h3>
+<hr />
+
+@if (cliente != null)
+{
+    <form @onsubmit="EditarClienteAsync">
+        <div class="form-group">
+            <label for="primerNombre">Primer Nombre:</label>
+            <input type="text" class="form-control" id="primerNombre" @bind="cliente.PrimerNombre">
+        </div>
+        <div class="form-group">
+            <label for="segundoNombre">Segundo Nombre:</label>
+            <input type="text" class="form-control" id="segundoNombre" @bind="cliente.SegundoNombre">
+        </div>
+        <div class="form-group">
+            <label for="primerApellido">Primer Apellido:</label>
+            <input type="text" class="form-control" id="primerApellido" @bind="cliente.PrimerApellido">
+        </div>
+        <div class="form-group">
+            <label for="segundoApellido">Segundo Apellido:</label>
+            <input type="text" class="form-control" id="segundoApellido" @bind="cliente.SegundoApellido">
+        </div>
+        <div class="form-group">
+            <label for="dui">DUI:</label>
+            <input type="text" class="form-control" id="dui" @bind="cliente.DUI">
+        </div>
+        <div class="form-group">
+            <label for="nit">NIT:</label>
+            <input type="text" class="form-control" id="nit" @bind="cliente.NIT">
+        </div>
+        <div class="form-group">
+            <label for="fechaNacimiento">Fecha de Nacimiento:</label>
+            <input type="date" class="form-control" id="fechaNacimiento" @bind="cliente.FechaNacimiento">
+        </div>
+        <div class="form-group">
+            <label for="direccion">Dirección:</label>
+            <input type="text" class="form-control" id="direccion" @bind="cliente.Direccion">
+        </div>
+        <br />
+        <button type="submit" class="btn btn-success">Guardar Cambios</button>
+    </form>
+
+}
+else
+{
+    <p>Cargando información del cliente...</p>
+}
+<br />
+<h3>Beneficiarios</h3>
+<hr />
+
+<button class="btn btn-primary" @onclick="MostrarModalAgregarBeneficiario">Agregar Beneficiario</button>
+
+
+    @if (beneficiarios != null)
+    {
+        <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre Completo</th>
+                    <th>Edad</th>
+                    <th>Fecha de Nacimiento</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var beneficiario in beneficiarios)
+                {
+                    <tr>
+                        <td>@beneficiario.NombreCompleto</td>
+                        <td>@beneficiario.Edad</td>
+                        <td>@beneficiario.FechaNacimiento.ToShortDateString()</td>
+                    <td>
+                            <div class="d-inline">
+                                <button class="btn btn-primary btn-sm" @onclick="(e) => MostrarModalEditarBeneficiario(beneficiario)">Editar</button>
+                                <button class="btn btn-danger btn-sm" @onclick="(e) => EliminarBeneficiario(beneficiario)">Eliminar</button>
+                            </div>
+                    </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+else
+{
+    <p>Cargando beneficiarios...</p>
+}
+
+@if (mostrarModalAgregarBeneficiario)
+{
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Beneficiario</h5>
+                    <button type="button" class="close" @onclick="CerrarModalAgregarBeneficiario">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Formulario para agregar un nuevo beneficiario -->
+                    <div class="form-group">
+                        <label for="nombreCompleto">Nombre Completo:</label>
+                        <input type="text" class="form-control" id="nombreCompleto" @bind="nuevoBeneficiario.NombreCompleto">
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaNacimiento">Fecha de Nacimiento:</label>
+                        <input type="date" class="form-control" id="fechaNacimiento" @bind="nuevoBeneficiario.FechaNacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label for="edad">Edad:</label>
+                        <input type="number" class="form-control" id="edad" @bind="nuevoBeneficiario.Edad">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalAgregarBeneficiario">Cancelar</button>
+                    <button type="button" class="btn btn-success" @onclick="AgregarBeneficiario">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mostrarModalEditarBeneficiario)
+{
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Beneficiario</h5>
+                    <button type="button" class="close" @onclick="CerrarModalEditarBeneficiario">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Formulario para editar el beneficiario -->
+                    <div class="form-group">
+                        <label for="nombreCompleto">Nombre Completo:</label>
+                        <input type="text" class="form-control" id="nombreCompleto" @bind="beneficiarioEditado.NombreCompleto">
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaNacimiento">Fecha de Nacimiento:</label>
+                        <input type="date" class="form-control" id="fechaNacimiento" @bind="beneficiarioEditado.FechaNacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label for="edad">Edad:</label>
+                        <input type="number" class="form-control" id="edad" @bind="beneficiarioEditado.Edad">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalEditarBeneficiario">Cancelar</button>
+                    <button type="button" class="btn btn-success" @onclick="GuardarEdicionBeneficiario">Editar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private Cliente cliente;
+    private List<Beneficiario> beneficiarios; // Agregar esta línea para declarar la variable
+    private bool mostrarModalEditarBeneficiario = false;
+    private Beneficiario beneficiarioEditado = new Beneficiario();
+
+
+    [Parameter]
+    public string id { get; set; }
+
+    private string token;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Obtener al cliente
+
+            // Obtener el token de localStorage
+            token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
+
+            if (string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("Debes obtener un token primero.");
+                return;
+            }
+
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Realizar una solicitud HTTP GET para obtener los datos del cliente por su ID
+            //var response = await HttpClient.GetAsync($"https://devgestionesservice.devacsa.com/Test/ObtenerCliente?IdCliente={id}");
+            var response = await HttpClient.GetAsync($"http://localhost:8000/api/clientes/{id}");
+            response.EnsureSuccessStatusCode();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("JSON recibido: " + responseContent);
+
+                // Deserializa la lista de objetos Cliente desde el JSON
+                var clientes = JsonSerializer.Deserialize<List<Cliente>>(responseContent);
+
+                // Verifica si la lista de clientes no está vacía antes de continuar
+                if (clientes != null && clientes.Count > 0)
+                {
+                    // El primer elemento del array contiene los datos del cliente que deseas editar
+                    cliente = clientes[0];
+                }
+                else
+                {
+                    Console.WriteLine("La lista de clientes está vacía o nula.");
+                    // Puedes manejar este caso según tus necesidades
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error al obtener datos del cliente. Código de estado: " + (int)response.StatusCode);
+            }
+
+            // Obtener los beneficiarios del cliente
+
+            var responseBeneficiarios = await HttpClient.GetAsync($"http://localhost:8000/api/beneficiarios/{id}");
+            responseBeneficiarios.EnsureSuccessStatusCode();
+
+            if (responseBeneficiarios.IsSuccessStatusCode)
+            {
+                var responseContentBeneficiarios = await responseBeneficiarios.Content.ReadAsStringAsync();
+                Console.WriteLine("JSON de beneficiarios recibido: " + responseContentBeneficiarios);
+
+                // Deserializa la lista de objetos Beneficiario desde el JSON
+                beneficiarios = JsonSerializer.Deserialize<List<Beneficiario>>(responseContentBeneficiarios);
+            }
+            else
+            {
+                Console.WriteLine("Error al obtener beneficiarios. Código de estado: " + (int)responseBeneficiarios.StatusCode);
+            }
+
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+
+    private async Task EditarClienteAsync()
+    {
+        try
+        {
+            Console.WriteLine("Contenido del objeto cliente:");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(cliente));
+            // Configurar el encabezado de autorización con el token
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Formatear manualmente la fecha en el formato deseado (sin la "Z" al final)
+            string fechaFormateada = cliente.FechaNacimiento.ToString("yyyy-MM-ddTHH:mm:ss");
+
+            // Asignar la fecha formateada directamente al objeto cliente existente
+            cliente.FechaNacimiento = DateTime.ParseExact(fechaFormateada, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+
+            // Serializar el objeto cliente a JSON
+            var jsonCliente = JsonSerializer.Serialize(cliente);
+
+            // Crear una solicitud HTTP POST con el contenido JSON
+            var content = new StringContent(jsonCliente, Encoding.UTF8, "application/json");
+            //var response = await HttpClient.PostAsync($"https://devgestionesservice.devacsa.com/Test/ActualizarDatosClientes", content);
+            var response = await HttpClient.PutAsync($"http://localhost:8000/api/clientes", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Cliente editado correctamente, redirigir al usuario a la página de clientes
+                NavigationManager.NavigateTo("/clientes");
+                Console.WriteLine("El cliente se ha editado correctamente");
+            }
+            else
+            {
+                Console.WriteLine("Error al editar el cliente. Código de estado: " + (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    private bool mostrarModalAgregarBeneficiario = false;
+    private Beneficiario nuevoBeneficiario = new Beneficiario
+        {
+            FechaNacimiento = DateTime.Now // Establece la fecha predeterminada en la fecha actual
+        };
+
+    private void MostrarModalAgregarBeneficiario()
+    {
+        mostrarModalAgregarBeneficiario = true;
+        nuevoBeneficiario = new Beneficiario
+            {
+                FechaNacimiento = DateTime.Now.Date // Establece la fecha en la medianoche
+            };
+    }
+
+    private void CerrarModalAgregarBeneficiario()
+    {
+        mostrarModalAgregarBeneficiario = false;
+        nuevoBeneficiario = new Beneficiario(); // Reinicializa el objeto Beneficiario al cerrar el modal
+    }
+
+    private async Task AgregarBeneficiario()
+    {
+        try
+        {
+            // Establece el campo idCliente con el ID del cliente que estás editando
+            nuevoBeneficiario.IdCliente = cliente.IdCliente;
+
+            // Formatear manualmente la fecha en el formato deseado (sin la "Z" al final)
+            string fechaFormateada = nuevoBeneficiario.FechaNacimiento.ToString("yyyy-MM-ddTHH:mm:ss");
+
+            // Asignar la fecha formateada directamente al objeto cliente existente
+            nuevoBeneficiario.FechaNacimiento = DateTime.ParseExact(fechaFormateada, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+
+            // Configura el encabezado de autorización con el token
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Serializa el objeto nuevoBeneficiario a JSON sin incluir el campo idBeneficiario
+            var jsonBeneficiario = JsonSerializer.Serialize(new
+            {
+                idCliente = nuevoBeneficiario.IdCliente,
+                nombreCompleto = nuevoBeneficiario.NombreCompleto,
+                edad = nuevoBeneficiario.Edad,
+                fechaNacimiento = nuevoBeneficiario.FechaNacimiento
+            });
+
+            // Agrega un registro en la consola para ver el JSON antes de enviarlo
+            Console.WriteLine("JSON que se enviará en la solicitud POST:");
+            Console.WriteLine(jsonBeneficiario);
+
+            // Crea una solicitud HTTP POST con el contenido JSON
+            var content = new StringContent(jsonBeneficiario, Encoding.UTF8, "application/json");
+
+            // Realiza la solicitud HTTP POST a la API para agregar el nuevo beneficiario
+            var response = await HttpClient.PostAsync("http://localhost:8000/api/beneficiarios", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // La solicitud fue exitosa, ahora debes manejar la respuesta del servidor
+                // y actualizar la lista de beneficiarios con el nuevo beneficiario agregado.
+
+                // Primero, obtén la respuesta del servidor como una cadena JSON
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                // Deserializa la respuesta JSON en un objeto Beneficiario
+                var beneficiarioAgregado = JsonSerializer.Deserialize<Beneficiario>(responseContent);
+
+                if (beneficiarioAgregado != null)
+                {
+                    // Agrega el nuevo beneficiario a la lista de beneficiarios
+                    beneficiarios.Add(beneficiarioAgregado);
+
+                    // Cierra el modal después de agregar el beneficiario
+                    mostrarModalAgregarBeneficiario = false;
+
+                    // Reinicializa el objeto nuevoBeneficiario
+                    nuevoBeneficiario = new Beneficiario();
+
+                    // Agrega un mensaje en la consola para indicar que se ingresó correctamente el beneficiario
+                    Console.WriteLine("Beneficiario ingresado correctamente.");
+
+                    // Llama a la función para obtener los beneficiarios nuevamente
+                    await ObtenerBeneficiariosDelCliente();
+                }
+                else
+                {
+                    Console.WriteLine("Error al deserializar la respuesta del servidor.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error al agregar el beneficiario. Código de estado: " + (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    private async Task ObtenerBeneficiariosDelCliente()
+    {
+        try
+        {
+            // Realiza una solicitud HTTP GET para obtener los beneficiarios del cliente
+            var responseBeneficiarios = await HttpClient.GetAsync($"http://localhost:8000/api/beneficiarios/{id}");
+            responseBeneficiarios.EnsureSuccessStatusCode();
+
+            if (responseBeneficiarios.IsSuccessStatusCode)
+            {
+                var responseContentBeneficiarios = await responseBeneficiarios.Content.ReadAsStringAsync();
+                Console.WriteLine("JSON de beneficiarios recibido: " + responseContentBeneficiarios);
+
+                // Deserializa la lista de objetos Beneficiario desde el JSON
+                beneficiarios = JsonSerializer.Deserialize<List<Beneficiario>>(responseContentBeneficiarios);
+            }
+            else
+            {
+                Console.WriteLine("Error al obtener beneficiarios. Código de estado: " + (int)responseBeneficiarios.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+
+    // ... Modal Editar Beneficiario
+
+    private void MostrarModalEditarBeneficiario(Beneficiario beneficiario)
+    {
+        mostrarModalEditarBeneficiario = true;
+        beneficiarioEditado = new Beneficiario
+            {
+                IdBeneficiario = beneficiario.IdBeneficiario,
+                NombreCompleto = beneficiario.NombreCompleto,
+                FechaNacimiento = beneficiario.FechaNacimiento,
+                Edad = beneficiario.Edad
+            };
+    }
+
+    private void CerrarModalEditarBeneficiario()
+    {
+        mostrarModalEditarBeneficiario = false;
+        beneficiarioEditado = new Beneficiario();
+    }
+
+    private async Task GuardarEdicionBeneficiario()
+    {
+        try
+        {
+            // Configurar el encabezado de autorización con el token
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Asegurarte de que el objeto beneficiarioEditado tenga el idCliente correcto
+            beneficiarioEditado.IdCliente = cliente.IdCliente; // Aquí estableces el idCliente
+
+            // Formatear manualmente la fecha en el formato deseado (sin la "Z" al final)
+            string fechaFormateada = beneficiarioEditado.FechaNacimiento.ToString("yyyy-MM-ddTHH:mm:ss");
+
+            // Asignar la fecha formateada directamente al objeto cliente existente
+            beneficiarioEditado.FechaNacimiento = DateTime.ParseExact(fechaFormateada, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+
+            // Serializar el objeto beneficiarioEditado a JSON
+            var jsonBeneficiarioEditado = JsonSerializer.Serialize(beneficiarioEditado);
+
+            // Agrega un registro en la consola para ver el JSON antes de enviarlo
+            Console.WriteLine("JSON que se enviará en la solicitud PUT:");
+            Console.WriteLine(jsonBeneficiarioEditado);
+
+            // Crear una solicitud HTTP PUT con el contenido JSON
+            var content = new StringContent(jsonBeneficiarioEditado, Encoding.UTF8, "application/json");
+
+            // Realizar la solicitud HTTP PUT a la API para actualizar el beneficiario
+            var response = await HttpClient.PutAsync($"http://localhost:8000/api/beneficiarios", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // La solicitud fue exitosa, ahora debes manejar la respuesta del servidor
+                // y actualizar la lista de beneficiarios con los cambios.
+
+                // Cierra el modal después de guardar la edición
+                mostrarModalEditarBeneficiario = false;
+
+                // Reinicializa el objeto beneficiarioEditado
+                beneficiarioEditado = new Beneficiario();
+
+                // Agrega un mensaje en la consola para indicar que se editó correctamente el beneficiario
+                Console.WriteLine("Beneficiario editado correctamente.");
+
+                // Llama a la función para obtener los beneficiarios nuevamente
+                await ObtenerBeneficiariosDelCliente();
+            }
+            else
+            {
+                Console.WriteLine("Error al editar el beneficiario. Código de estado: " + (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    private async Task EliminarBeneficiario(Beneficiario beneficiario)
+    {
+        try
+        {
+            // Configurar el encabezado de autorización con el token
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Realizar la solicitud HTTP DELETE a la API para eliminar el beneficiario
+            var response = await HttpClient.DeleteAsync($"http://localhost:8000/api/beneficiarios/{beneficiario.IdBeneficiario}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // La solicitud fue exitosa, ahora debes manejar la respuesta del servidor
+                // y actualizar la lista de beneficiarios eliminando el beneficiario.
+
+                // Agrega un mensaje en la consola para indicar que se eliminó correctamente el beneficiario
+                Console.WriteLine("Beneficiario eliminado correctamente.");
+
+                // Llama a la función para obtener los beneficiarios nuevamente
+                await ObtenerBeneficiariosDelCliente();
+            }
+            else
+            {
+                Console.WriteLine("Error al eliminar el beneficiario. Código de estado: " + (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    // ...
+
+    
+    public class Cliente
+    {
+        [JsonPropertyName("idCliente")]
+        public int IdCliente { get; set; }
+
+        [JsonPropertyName("primerNombre")]
+        public string PrimerNombre { get; set; }
+
+        [JsonPropertyName("segundoNombre")]
+        public string SegundoNombre { get; set; }
+
+        [JsonPropertyName("primerApellido")]
+        public string PrimerApellido { get; set; }
+
+        [JsonPropertyName("segundoApellido")]
+        public string SegundoApellido { get; set; }
+
+        [JsonPropertyName("dui")]
+        public string DUI { get; set; }
+
+        [JsonPropertyName("nit")]
+        public string NIT { get; set; }
+
+        [JsonPropertyName("fechaNacimiento")]
+        public DateTime FechaNacimiento { get; set; }
+
+        [JsonPropertyName("direccion")]
+        public string Direccion { get; set; }
+
+        [JsonPropertyName("idCiudad")]
+        public int IdCiudad { get; set; }
+
+        [JsonPropertyName("primeraCuota")]
+        public int? PrimeraCuota { get; set; }
+    }
+
+    public class Beneficiario
+    {
+        [JsonPropertyName("idBeneficiario")]
+        public int IdBeneficiario { get; set; }
+
+        [JsonPropertyName("idCliente")]
+        public int IdCliente { get; set; }
+
+        [JsonPropertyName("nombreCompleto")]
+        public string NombreCompleto { get; set; }
+
+        [JsonPropertyName("edad")]
+        public int Edad { get; set; }
+
+        [JsonPropertyName("fechaNacimiento")]
+        public DateTime FechaNacimiento { get; set; }
+    }
+
+}
