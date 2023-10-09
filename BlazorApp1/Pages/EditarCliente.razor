@@ -10,6 +10,8 @@
 @using System.Collections.Generic 
 @using System.Text
 @using System.Globalization
+@layout MainLayout
+
 
 <h3>Editar Cliente</h3>
 <hr />
@@ -287,6 +289,8 @@ else
                 // Cliente editado correctamente, redirigir al usuario a la página de clientes
                 NavigationManager.NavigateTo("/clientes");
                 Console.WriteLine("El cliente se ha editado correctamente");
+                await JSRuntime.InvokeVoidAsync("showAlertTop", "El cliente se ha editado correctamente");
+
             }
             else
             {

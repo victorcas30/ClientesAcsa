@@ -1,4 +1,27 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<script>
+    // ...
+
+    window.hideAlertTop = function () {
+        var alertDiv = document.getElementById('alertDivTop');
+        alertDiv.style.display = 'none';
+    };
+
+    window.showAlertTop = function (message) {
+        var alertDiv = document.getElementById('alertDivTop');
+        var alertMessage = document.getElementById('alertMessageTop');
+        alertMessage.innerText = message;
+        alertDiv.style.display = 'block';
+
+        setTimeout(function () {
+            hideAlertTop();
+        }, 5000); // Ocultar la alerta después de 5 segundos
+    };
+</script>
+
 
 <div class="page">
     <div class="sidebar">
@@ -7,11 +30,36 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+            <button class="btn btn-danger" @onclick="CerrarSesion">Cerrar Sesión</button>
+        </div>
+        <div id="alertDivTop" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
+            <span id="alertMessageTop"></span>
         </div>
 
         <article class="content px-4">
             @Body
         </article>
     </main>
+
 </div>
+
+
+@code {
+
+    private async Task CerrarSesion()
+    {
+        // Elimina el token de acceso del almacenamiento local (localStorage)
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "accessToken");
+
+        // Muestra un mensaje en la consola
+        Console.WriteLine("Sesión cerrada");
+
+        // Redirige al componente de autenticación después de cerrar sesión
+        NavigationManager.NavigateTo("/auth");
+    }
+
+    private async Task HideAlertTop()
+    {
+        await JSRuntime.InvokeVoidAsync("hideAlert");
+    }
+}
